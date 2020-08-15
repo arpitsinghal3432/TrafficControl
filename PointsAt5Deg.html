@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en" >
+
+	<head>
+	   <!-- Required meta tags -->
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+		<style>
+		
+		   #map {
+			height: 600px;
+			width: 100%;
+		   }
+		   
+		   #left-panel {
+			float: left;
+			width: 34%;
+			height: 100%;
+		  }
+
+			#right-panel {
+			float: right;
+			width: 34%;
+			height: 100%;
+		  } 
+		
+			.panel {
+			height: 100%;
+			overflow: auto;
+		  }
+
+		</style>
+    </head>
+	
+    <body>
+
+		<div id="map"></div>
+
+		<div id="left-panel">
+		 
+			<p> Points Displayed -> <span id="left"></span></p></br>
+		    <p> responseData  -> <span id="responseData"></span></p></br>
+			
+			<p> start locs  -> <span id="start_point"></span></p></br>
+			
+			<p> Status -> <span id="success"></span></p></br>
+			
+			<p> Distance -> <span id="Dist"></span></p></br>
+		    <p> Time  -> <span id="Time"></span></p></br>
+			
+		</div>
+			
+		<div id="right-panel">
+			  <p>Total Distance For Every Route - <span id="totalDistance"></span></p>
+		</div>
+
+		<script src="PointsAtPerimeter.js" type="text/javascript"></script>
+
+		<script src="Functions.js" type="text/javascript"></script>
+
+		<script src="Waypoints.js" type="text/javascript"></script>
+
+    <script>
+ 
+
+
+function initMap() {
+
+var Start = [];
+
+// Clockwise First Quadrant of the circle
+
+    CoefForPointsClockwiseFirst();
+
+    for(var i = 0; i< 18; i++)
+    {	
+	    var lat = latitude[i];
+		var lon = longitude[i];
+	    
+		Start[i] = new google.maps.LatLng(lat, lon);
+    }
+	
+	// Clockwise Second Quadrant of the circle
+
+    CoefForPointsClockwiseSecond();
+
+    for(var i = 18; i< 36; i++)
+    {	
+	    var lat = latitude[i];
+		var lon = longitude[i];
+	    
+		Start[i] = new google.maps.LatLng(lat, lon);
+    }
+	
+	// Clockwise Third Quadrant of the circle
+
+    CoefForPointsClockwiseThird();
+
+    for(var i = 36; i< 54; i++)
+    {	
+	    var lat = latitude[i];
+		var lon = longitude[i];
+	    
+		Start[i] = new google.maps.LatLng(lat, lon);
+    }
+
+	// Clockwise Fourth Quadrant of the circle
+
+    CoefForPointsClockwiseFourth();
+
+    for(var i = 54; i< 72; i++)
+    {	
+	    var lat = latitude[i];
+		var lon = longitude[i];
+	    
+		Start[i] = new google.maps.LatLng(lat, lon);
+    }
+	
+// set and display map.......
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 16,
+          center: end
+
+        });
+
+
+// set and display destination marker.......
+
+        var marker = new google.maps.Marker({
+          position: end,
+          map: map
+        });
+
+				
+// Add circle overlay and bind to marker
+
+	var circle = new google.maps.Circle({
+	map: map,
+	radius: Range,                               // in metres
+	fillColor: '#AA0000'
+	});
+	circle.bindTo('center', marker, 'position');
+
+/* setting markers for 72 origins all at a distance of 500 metre from the centre (destination)
+   and at an angle of (360/72 points) = 5 degree from each other.  
+*/
+
+// set and display origin markers.......
+
+	var j = 1;                   // to show the point no.
+   
+	for( var i=0; i< Start.length; i++)
+	{
+
+	var marker = new google.maps.Marker({
+          position: Start[i],
+		  title: "point " + j + " " + Start[i],
+          map: map
+        });
+ 
+	j = j + 1;
+
+	marker.setIcon('http://maps.google.com/mapfiles/ms/icons/green-dot.png')
+}
+
+	var ResponseStack = [];            // array of objects containing keys and values of response for all routes
+
+	var totalDistance = 0;         // to store distance response
+	var totalTime = 0;             // to store time for every route in text form
+	var exactTime = 0;             // to store exact time in seconds as value
+	var distanceTillLastLeg = 0;         // to store distance response ecept for last leg
+	var responseStart = 0;
+	var responseEnd = 0;
+	var responseCount = 0;
+	
+    var indexForStartPoints = 0;     
+	
+    var newIndex = 0;
+    var flagError = true;
+    var flagOK = true;
+    var minPoint = 1;	
+    var maxPoint = 9;
+	var displayCount = 0;
+	var PointNumber = minPoint;
+	var PointNumberCount = minPoint
+	var timeToLoad = 10000;
+	var timeCounter = 1;
+	var TempPointNumber = 1;
+	
+	  getDirections(); 
+
+	  PointNumberCount += 9;
+	  displayCount++;
+
+	var fun = setInterval(function()
+		{			
+			if(responseCount >= 71)
+			{
+				clearInterval(fun); 
+				document.getElementById('success').innerHTML = "success";
+			}
+			else
+			{
+				maxPoint += 9; 
+				
+				getDirections(); 
+				document.getElementById('left').innerHTML = indexForStartPoints;
+					
+				PointNumberCount += 9;
+				displayCount++;
+			}
+			
+		},(timeToLoad));
+
+	function getDirections(){
+  
+		for(PointNumber; PointNumber<=maxPoint; PointNumber++)
+		{
+			var x;
+			var waypointOrder = [];                         // Stores the waypoints on the route 100 metres away from each other 
+			waypointOrder.length = 0;
+
+			var waypts = [];         			// Stores the waypoints to display directions
+			
+			ChangeForAnyPoint = ChangeInDist * TempPointNumber;
+				
+				if(PointNumber <=18) { CalculateWaypointsClockwiseFirst(ChangeForAnyPoint); }
+				else if((PointNumber > 18) && (PointNumber <=36)) { CalculateWaypointsClockwiseSecond(ChangeForAnyPoint); }
+				else if((PointNumber > 36) && (PointNumber <=54)) { CalculateWaypointsClockwiseThird(ChangeForAnyPoint); }
+				else if((PointNumber > 54) && (PointNumber <=72)) { CalculateWaypointsClockwiseFourth(ChangeForAnyPoint); }
+				
+				else {window.alert("Error, Point out of range");}
+				
+				if((PointNumber%18) == 0){TempPointNumber = 1;}
+				
+				TempPointNumber++;
+				
+				for(x=0;x<4;x++)
+			{
+				waypointOrder[x] = new google.maps.LatLng(waypointLatitude[x], waypointLongitude[x]);
+
+				waypts.push({
+					  location : new google.maps.LatLng(waypointLatitude[x], waypointLongitude[x]),
+					  stopover: true
+					});
+
+					// set and display origin marker.......
+
+					marker[x] = new google.maps.Marker({
+					position: waypointOrder[x],
+					title: "start " + x,
+					map: map
+					});
+		  
+				marker[x].setIcon('http://maps.google.com/mapfiles/ms/icons/green.png')         
+				
+			}
+			  
+			// Display directions
+			 displayDirections();
+			 //setTimeout(displayDirections, 1000);
+		}
+	
+		function displayDirections()
+		{  
+				
+			 var directionsDisplay= new google.maps.DirectionsRenderer({
+				  map: map,
+				  panel: document.getElementById('right-panel')
+				});
+
+		  var directionsService = new google.maps.DirectionsService;
+		  
+			directionsDisplay.setMap(map);
+		 
+		  directionsService.route( {
+			origin: Start[indexForStartPoints],
+			destination: end,
+			waypoints : waypts,
+			travelMode: 'DRIVING',
+			drivingOptions: {
+			departureTime: new Date(Date.now()),  // for the time N milliseconds from now.
+			trafficModel: 'bestguess'
+		  }
+
+		}, function callback(response, status) {
+			
+			if (status == 'OK') 
+			{
+				directionsDisplay.setDirections(response);
+			
+			    // set response variables zero for every response route
+			
+			    totalDistance = 0;
+			    totalTime = 0;
+				exactTime = 0;
+				distanceTillLastLeg = 0;
+				
+				var legLen = response.routes[0].legs.length;
+				 
+				for(var legIndex =0; legIndex <= legLen-1; legIndex++)
+				{
+					totalDistance += response.routes[0].legs[legIndex].distance.value;    // to calcuate distance for every route
+					
+					totalTime += response.routes[0].legs[legIndex].duration.text;        // to calculate time for every route
+					
+					exactTime += response.routes[0].legs[legIndex].duration.value;        // to calculate exact time for every route
+					
+					/* responseStart = response.routes[0].legs[0].start_location;
+					
+					responseEnd = response.routes[0].legs[0].end_location; */
+					
+				}
+				
+				for(var legIndex =0; legIndex <= legLen-2; legIndex++)
+				{
+					distanceTillLastLeg += response.routes[0].legs[legIndex].distance.value; 
+				}
+				
+				responseStart = response.routes[0].legs[0].start_location;
+				responseEnd = response.routes[0].legs[0].end_location;
+				
+				newIndex += 1;
+				responseCount += 1;
+				
+					if(((totalDistance > Range-(Range/5))&&(totalDistance < Range+(Range/5)))||((distanceTillLastLeg > (Range-(Range/5))-(Range/10))&&(totalDistance < (Range-(Range/5))+(Range/10))))
+					{
+					    if((Start[responseCount].lat().toFixed(3) == responseStart.lat().toFixed(3))&&(Start[responseCount].lng().toFixed(3) == responseStart.lng().toFixed(3)))
+						{
+							var obj = {point: null, distance: null, distanceTillLastLeg: null, time: null, start: null, end: null};
+							
+							obj.point = responseCount + 1;
+							obj.distance = totalDistance;						
+							obj.distanceTillLastLeg = distanceTillLastLeg;	
+							
+							obj.time = exactTime;
+							obj.start = responseStart;
+							obj.end = responseEnd;
+							
+							ResponseStack.push(obj);
+							
+							document.getElementById('start_point').innerHTML += Start[responseCount] + " , " ;
+							
+							document.getElementById('responseData').innerHTML = ResponseStack.length;
+								
+							document.getElementById('Dist').innerHTML += "   " + obj.point + " " + obj.distance + " " + obj.distanceTillLastLeg
+																		 + " "  + obj.time + " " + obj.start + " " + obj.end + " ,     ";
+							// document.getElementById('Time').innerHTML += " " + obj.time;
+						}
+					}
+				}
+				else
+				{	
+					if (status == 'OVER_QUERY_LIMIT') 
+					{
+					    if(flagError == true) {newIndex = 0;}
+						window.alert('index -> ' + indexForStartPoints);
+						flagError = false;
+						setTimeout(function(){displayDirections();},250);	
+					}
+					else 
+					{
+						window.alert('Directions request failed due to ' + status);
+					}
+					
+				}
+			});
+			
+		indexForStartPoints++;		
+		}
+	}
+
+// creating a polyline between origin and destination.....
+
+	var flightPlanCoordinates = [];
+
+	var point = new google.maps.LatLng(latitude[35], longitude[35]);
+
+	var point1 =new google.maps.LatLng(latitude[71], longitude[71]);
+
+	flightPlanCoordinates.push(point);
+    flightPlanCoordinates.push(point1);
+
+        var flightPath = new google.maps.Polyline({
+          path: flightPlanCoordinates,
+          geodesic: true,
+          strokeColor: '#FF0000',
+          strokeOpacity: 4.0,
+          strokeWeight: 2
+        });
+
+        flightPath.setMap(map);
+		
+		// creating a polyline between origin and destination.....
+
+	var flightPlanCoordinates1 = [];
+
+	var point = new google.maps.LatLng(latitude[17], longitude[17]);
+
+	var point1 =new google.maps.LatLng(latitude[53], longitude[53]);
+
+	flightPlanCoordinates1.push(point);
+    flightPlanCoordinates1.push(point1);
+
+        var flightPath = new google.maps.Polyline({
+          path: flightPlanCoordinates1,
+          geodesic: true,
+          strokeColor: '#0000FF',
+          strokeOpacity: 4.0,
+          strokeWeight: 2
+        });
+
+        flightPath.setMap(map);
+}
+
+   </script>
+
+	   <script
+		src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCELHTxqY7-ARa-kNZKaaXM0bLZQJteI3c&callback=initMap" async defer>
+		</script>
+		
+ </body>
+</html>
